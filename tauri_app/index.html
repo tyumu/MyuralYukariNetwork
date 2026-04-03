@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Myural Yukari Desktop</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <h1>Myural Yukari</h1>
+      <p class="sub">Tauri + Go + Python(MemU sidecar) minimal shell</p>
+
+      <section class="panel">
+        <h2>Tauri Command Check</h2>
+        <div class="row">
+          <input id="name-input" type="text" value="world" />
+          <button id="greet-btn">Invoke greet</button>
+        </div>
+        <p id="greet-output" class="output">Output will appear here.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Go API Check</h2>
+        <p>Set your Go API base URL and call /health (or compatible endpoint).</p>
+        <div class="row">
+          <input id="go-base-url" type="text" value="http://127.0.0.1:8080" />
+          <button id="go-health-btn">Fetch /health</button>
+        </div>
+        <p id="go-output" class="output">No request yet.</p>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+  </html>

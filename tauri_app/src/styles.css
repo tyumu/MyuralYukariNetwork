@@ -1,0 +1,65 @@
+:root {
+  font-family: Segoe UI, sans-serif;
+  color: #13223a;
+  background: #f4f7fb;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  margin: 0;
+}
+
+.sub {
+  margin-top: 8px;
+  color: #3c4d6a;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+input {
+  flex: 1;
+  min-width: 260px;
+  border: 1px solid #bfcde3;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #0f5fd6;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0a4cad;
+}
+
+.output {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
