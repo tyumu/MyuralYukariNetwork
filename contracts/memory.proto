@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package memory.v1;
+
+option go_package = "go-backend/internal/memory/memorypb;memorypb";
+
+import "google/protobuf/struct.proto";
+
+message MemorizeRequest {
+  string user_id = 1;
+  string text = 2;
+  string assistant_text = 3;
+  string memory_type = 4;
+  string category = 5;
+}
+
+message MemorizeResponse {
+  string user_id = 1;
+  string item_id = 2;
+  string category = 3;
+  bool success = 4;
+  bool saved = 5;
+  string skip_reason = 6;
+  string error = 7;
+}
+
+message RecallRequest {
+  string user_id = 1;
+  string query = 2;
+  int32 top_k = 3;
+  google.protobuf.Struct where = 4;
+  string method = 5;
+}
+
+message RecallItem {
+  string id = 1;
+  string content = 2;
+  string category = 3;
+  float salience = 4;
+}
+
+message RecallResponse {
+  string user_id = 1;
+  repeated RecallItem items = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string status = 2;
+  string error = 3;
+}
+
+service MemoryService {
+  rpc Memorize(MemorizeRequest) returns (MemorizeResponse);
+  rpc Recall(RecallRequest) returns (RecallResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
