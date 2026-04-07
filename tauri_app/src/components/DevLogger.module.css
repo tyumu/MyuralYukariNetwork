@@ -1,0 +1,109 @@
+.container {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 300px;
+  max-height: 300px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.container.closed {
+  max-height: auto;
+}
+
+.toggle {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: #2a2a2a;
+  color: #aaa;
+  border: none;
+  border-bottom: 1px solid #333;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.toggle:hover {
+  background: #333;
+}
+
+.closed .toggle {
+  border-bottom: none;
+}
+
+.services {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.service {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.service.ok {
+  background: #2d5016;
+  color: #90ee90;
+}
+
+.service.error {
+  background: #5f2020;
+  color: #ff6b6b;
+}
+
+.service.degraded {
+  background: #5f4d2f;
+  color: #ffd700;
+}
+
+.logs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.empty {
+  text-align: center;
+  color: #666;
+  padding: 2rem 1rem;
+  font-style: italic;
+}
+
+.log {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.log:last-child {
+  border-bottom: none;
+}
+
+.time {
+  color: #666;
+  flex-shrink: 0;
+  width: 70px;
+}
+
+.text {
+  color: #aaa;
+  word-break: break-all;
+}
