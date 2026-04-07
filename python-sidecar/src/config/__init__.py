@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from dotenv import load_dotenv
 
 # Resolve repository paths from this file location.
@@ -20,7 +21,8 @@ if str(MEMU_SRC) not in sys.path:
 load_dotenv(SIDECAR_ROOT / ".env")
 load_dotenv(REPO_ROOT / ".env")
 
-from memu.app import MemoryService
+if TYPE_CHECKING:
+    from memu.app import MemoryService
 
 
 @dataclass(frozen=True)
@@ -68,8 +70,9 @@ def _default_memory_grpc_endpoint() -> str:
     return "unix:///tmp/myural_yukari_memory.sock"
 
 
-def build_memory_service(config: AppConfig) -> MemoryService:
+def build_memory_service(config: AppConfig) -> "MemoryService":
     """Build and return a configured MemoryService instance."""
+    from memu.app import MemoryService
     
     memory_categories = [
         {"name": "conversation", "description": "Conversation turns and short-term context."},
