@@ -37,6 +37,22 @@ from memu.workflow.step import WorkflowState, WorkflowStep
 
 logger = logging.getLogger(__name__)
 
+MEMORY_EXTRACT_SYSTEM_PROMPT = """
+You are a strict memory extraction engine.
+
+Hard requirements:
+- Follow the requested output format exactly.
+- Preserve the language of the input resource text. Do not translate.
+- Keep user-originated entities and terms in the original language.
+- If the input is Japanese, output memory content in Japanese.
+""".strip()
+
+SEGMENT_SUMMARY_SYSTEM_PROMPT = """
+Summarize the given conversation segment in 1-2 concise sentences.
+Focus on the main topic or theme discussed.
+Use the same language as the input segment text. Do not translate.
+""".strip()
+
 if TYPE_CHECKING:
     from memu.app.service import Context
     from memu.app.settings import MemorizeConfig
@@ -529,7 +545,7 @@ class MemorizeMixin:
         ]
         valid_prompts = [prompt for prompt in prompts if prompt.strip()]
         # These prompts are instructions that request structured output, not text summaries.
-        tasks = [client.chat(prompt_text) for prompt_text in valid_prompts]
+        tasks = [client.chat(prompt_text, system_prompt=MEMORY_EXTRACT_SYSTEM_PROMPT) for prompt_text in valid_prompts]
         responses = await asyncio.gather(*tasks)
         return self._parse_structured_entries(memory_types, responses)
 
@@ -830,13 +846,9 @@ class MemorizeMixin:
 
     async def _summarize_segment(self, segment_text: str, llm_client: Any | None = None) -> str | None:
         """Summarize a single conversation segment."""
-        system_prompt = (
-            "Summarize the given conversation segment in 1-2 concise sentences. "
-            "Focus on the main topic or theme discussed."
-        )
         try:
             client = llm_client or self._get_llm_client()
-            response = await client.chat(segment_text, system_prompt=system_prompt)
+            response = await client.chat(segment_text, system_prompt=SEGMENT_SUMMARY_SYSTEM_PROMPT)
             return response.strip() if response else None
         except Exception:
             logger.exception("Failed to summarize segment")
