@@ -62,6 +62,55 @@ cd <MyuralYukariNetwork のクローン先>
 
 `stop-dev.ps1` は追跡 state が見つからない場合でも、主要プロセスに対して best-effort cleanup を行います。
 
+## env の役割
+
+- [.env](.env) は Go backend と Python sidecar が起動時に読む共通設定です
+- [env.ps1](env.ps1) は Windows PowerShell で手動起動するときの補助です
+- [env.sh](env.sh) は macOS / Linux で手動起動するときの補助です
+- [scripts/start-dev.ps1](scripts/start-dev.ps1) は [env.ps1](env.ps1) を読み、必要なら llama.cpp や sidecar の上書き値も参照します
+- [.env.example](.env.example) は新規作成時のひな形で、実運用では [.env](.env) にコピーして使います
+
+## env 変数一覧
+
+### 共通設定
+
+これらは [.env](.env) に書く値で、[env.ps1](env.ps1) と [env.sh](env.sh) にも同じ意味で置けます。
+
+- `SERVER_PORT`
+- `SERVER_HOST`
+- `LOG_LEVEL`
+- `DEV_MODE`
+- `FRONTEND_ORIGIN`
+- `MEMORY_GRPC_ENDPOINT`
+- `LLM_BASE_URL`
+- `LLM_API_KEY`
+- `CHAT_MODEL`
+- `EMBED_MODEL`
+- `POSTGRES_DSN`
+- `RETRIEVAL_TOP_K`
+- `VITE_API_BASE_URL`
+- `SIDECAR_HEALTH_STRICT`
+
+### start-dev.ps1 / env.ps1 / env.sh 専用の上書き
+
+これらは通常の .env ではなく、`start-dev.ps1` で起動するローカル開発時の補助値です。
+
+- `LLAMA_SERVER_EXE`
+- `LLAMA_HF_REPO`
+- `LLAMA_HF_FILE`
+- `LLAMA_MODEL_PATH`
+- `LLAMA_NGL`
+- `LLAMA_CONTEXT`
+- `LLAMA_POOLING`
+- `SIDECAR_PYTHON_EXE`
+
+### 使い分けの目安
+
+- すべての起動方法で共通に効かせたい値は [.env](.env) に置く
+- Windows の手動起動は [env.ps1](env.ps1) を使う
+- macOS / Linux の手動起動は [env.sh](env.sh) を使う
+- llama.cpp の場所やモデルファイルの指定を変えたいときだけ start-dev 専用の上書きを使う
+
 `start-dev.ps1` は次を順番に起動/確認します。
 
 1. llama.cpp (`LLM_BASE_URL/models`)
