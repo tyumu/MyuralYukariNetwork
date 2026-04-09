@@ -514,6 +514,7 @@ class CRUDMixin:
             summary=memory_payload["content"],
             embedding=content_embedding,
             user_data=dict(user or {}),
+            resource_id=None,
         )
         cat_names = memory_payload["categories"]
         mapped_cat_ids = self._map_category_names_to_ids(cat_names, ctx)
