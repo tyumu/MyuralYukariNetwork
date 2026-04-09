@@ -68,6 +68,64 @@ function Test-UrlReady {
     }
 }
 
+function Get-ProcessExitDiagnostic {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+        [Parameter(Mandatory = $true)]
+        [int]$ProcessId,
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+        [string]$FailureLogPath = ''
+    )
+
+    $message = "$Label process (PID=$ProcessId) exited before becoming ready at $Url"
+    if (-not [string]::IsNullOrWhiteSpace($FailureLogPath) -and (Test-Path $FailureLogPath)) {
+        $stderrTail = @(Get-Content $FailureLogPath -Tail 20 -ErrorAction SilentlyContinue)
+        if ($stderrTail.Count -gt 0) {
+            $tailText = ($stderrTail -join "`n")
+            $message = "$message`n--- stderr tail ($FailureLogPath) ---`n$tailText"
+
+            $tailTextLower = $tailText.ToLowerInvariant()
+            if ($tailTextLower.Contains('rate limit') -or $tailTextLower.Contains('429')) {
+                $message = "$message`nHint: Hugging Face rate limit hit. Set LLAMA_MODEL_PATH to a local .gguf, or configure Hugging Face authentication."
+            }
+        } else {
+            $message = "$message`nCheck log: $FailureLogPath"
+        }
+    }
+
+    return $message
+}
+
+function Get-TimeoutDiagnostic {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+        [Parameter(Mandatory = $true)]
+        [string]$Target,
+        [string]$FailureLogPath = ''
+    )
+
+    $message = "Timed out waiting for $Label at $Target"
+    if (-not [string]::IsNullOrWhiteSpace($FailureLogPath) -and (Test-Path $FailureLogPath)) {
+        $stderrTail = @(Get-Content $FailureLogPath -Tail 20 -ErrorAction SilentlyContinue)
+        if ($stderrTail.Count -gt 0) {
+            $tailText = ($stderrTail -join "`n")
+            $message = "$message`n--- stderr tail ($FailureLogPath) ---`n$tailText"
+
+            $tailTextLower = $tailText.ToLowerInvariant()
+            if ($tailTextLower.Contains('rate limit') -or $tailTextLower.Contains('429')) {
+                $message = "$message`nHint: Hugging Face rate limit hit. Set LLAMA_MODEL_PATH to a local .gguf, or configure Hugging Face authentication."
+            }
+        } else {
+            $message = "$message`nCheck log: $FailureLogPath"
+        }
+    }
+
+    return $message
+}
+
 function Wait-ForUrl {
     param(
         [Parameter(Mandatory = $true)]
@@ -75,11 +133,20 @@ function Wait-ForUrl {
         [Parameter(Mandatory = $true)]
         [string]$Label,
         [int]$TimeoutSeconds = 180,
-        [int]$RequestTimeoutSeconds = 5
+        [int]$RequestTimeoutSeconds = 5,
+        [int]$ProcessId = 0,
+        [string]$FailureLogPath = ''
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
+        if ($ProcessId -gt 0) {
+            $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+            if ($null -eq $proc) {
+                throw (Get-ProcessExitDiagnostic -Label $Label -ProcessId $ProcessId -Url $Url -FailureLogPath $FailureLogPath)
+            }
+        }
+
         if (Test-UrlReady -Url $Url -RequestTimeoutSeconds $RequestTimeoutSeconds) {
             Write-Host "[$Label] ready at $Url" -ForegroundColor Green
             return
@@ -88,7 +155,7 @@ function Wait-ForUrl {
         Start-Sleep -Milliseconds 1000
     }
 
-    throw "Timed out waiting for $Label at $Url"
+    throw (Get-TimeoutDiagnostic -Label $Label -Target $Url -FailureLogPath $FailureLogPath)
 }
 
 function Test-GrpcMemoryHealth {
@@ -142,7 +209,8 @@ function Wait-ForGrpcMemoryHealth {
         [string]$Endpoint,
         [int]$ProcessId = 0,
         [int]$TimeoutSeconds = 180,
-        [int]$RequestTimeoutSeconds = 5
+        [int]$RequestTimeoutSeconds = 5,
+        [string]$FailureLogPath = ''
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -150,7 +218,7 @@ function Wait-ForGrpcMemoryHealth {
         if ($ProcessId -gt 0) {
             $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
             if ($null -eq $proc) {
-                throw "Python sidecar process exited before becoming healthy. Check $DevStateDir\\python-sidecar.stderr.log"
+                throw (Get-ProcessExitDiagnostic -Label 'Python sidecar' -ProcessId $ProcessId -Url "grpc://$Endpoint" -FailureLogPath $FailureLogPath)
             }
         }
 
@@ -162,7 +230,7 @@ function Wait-ForGrpcMemoryHealth {
         Start-Sleep -Milliseconds 1000
     }
 
-    throw "Timed out waiting for Python sidecar gRPC health at $Endpoint"
+    throw (Get-TimeoutDiagnostic -Label 'Python sidecar gRPC health' -Target "grpc://$Endpoint" -FailureLogPath $FailureLogPath)
 }
 
 function Start-LoggedProcess {
@@ -278,7 +346,8 @@ function Invoke-ServiceStep {
         [Parameter(Mandatory = $true)]
         [scriptblock]$StartAction,
         [int]$TimeoutSeconds = 180,
-        [int]$RequestTimeoutSeconds = 5
+        [int]$RequestTimeoutSeconds = 5,
+        [string]$FailureLogPath = ''
     )
 
     if (Test-UrlReady -Url $Url -RequestTimeoutSeconds $RequestTimeoutSeconds) {
@@ -291,8 +360,21 @@ function Invoke-ServiceStep {
         return
     }
 
-    & $StartAction
-    Wait-ForUrl -Url $Url -Label $Name -TimeoutSeconds $TimeoutSeconds -RequestTimeoutSeconds $RequestTimeoutSeconds
+    $startedProcess = & $StartAction | Select-Object -First 1
+
+    $startedProcessId = 0
+    if ($null -ne $startedProcess) {
+        if ($startedProcess -is [System.Diagnostics.Process]) {
+            $startedProcessId = [int]$startedProcess.Id
+        } elseif ($startedProcess.PSObject.Properties.Name -contains 'Id') {
+            try {
+                $startedProcessId = [int]$startedProcess.Id
+            } catch {
+            }
+        }
+    }
+
+    Wait-ForUrl -Url $Url -Label $Name -TimeoutSeconds $TimeoutSeconds -RequestTimeoutSeconds $RequestTimeoutSeconds -ProcessId $startedProcessId -FailureLogPath $FailureLogPath
 }
 
 function Resolve-SidecarPython {
@@ -354,7 +436,7 @@ try {
         $llamaArgs = @('--hf-repo', $llamaHfRepo, '--hf-file', $llamaHfFile) + $llamaArgs
     }
 
-    Invoke-ServiceStep -Name 'llama.cpp' -Url $llamaModelsUrl -Port $llamaPort -TimeoutSeconds 300 -RequestTimeoutSeconds 10 -StartAction {
+    Invoke-ServiceStep -Name 'llama.cpp' -Url $llamaModelsUrl -Port $llamaPort -TimeoutSeconds 300 -RequestTimeoutSeconds 10 -FailureLogPath (Join-Path $DevStateDir 'llama-server.stderr.log') -StartAction {
         Start-LoggedProcess -Name 'llama-server' -FilePath $llamaCommand -ArgumentList $llamaArgs -WorkingDirectory $RepoRoot
     }
 
@@ -373,7 +455,7 @@ try {
         Write-Host "[Python sidecar] already running (gRPC healthy at $memoryGrpcEndpoint)" -ForegroundColor Yellow
     } else {
         $sidecarProcess = Start-LoggedProcess -Name 'python-sidecar' -FilePath $sidecarPythonExe -ArgumentList @('main.py') -WorkingDirectory (Join-Path $RepoRoot 'python-sidecar')
-        Wait-ForGrpcMemoryHealth -PythonExe $sidecarPythonExe -Endpoint $memoryGrpcEndpoint -ProcessId $sidecarProcess.Id -TimeoutSeconds 180 -RequestTimeoutSeconds 10
+        Wait-ForGrpcMemoryHealth -PythonExe $sidecarPythonExe -Endpoint $memoryGrpcEndpoint -ProcessId $sidecarProcess.Id -TimeoutSeconds 180 -RequestTimeoutSeconds 10 -FailureLogPath (Join-Path $DevStateDir 'python-sidecar.stderr.log')
     }
 
     $goCommand = Resolve-CommandPath -Candidates @('go', 'go.exe')
@@ -382,7 +464,7 @@ try {
     $serverHost = Get-EnvOrDefault -Name 'SERVER_HOST' -DefaultValue '127.0.0.1'
     $serverPort = [int](Get-EnvOrDefault -Name 'SERVER_PORT' -DefaultValue '8000')
     $serverStatusUrl = "http://${serverHost}:$serverPort/status"
-    Invoke-ServiceStep -Name 'Go backend' -Url $serverStatusUrl -Port $serverPort -TimeoutSeconds 180 -RequestTimeoutSeconds 10 -StartAction {
+    Invoke-ServiceStep -Name 'Go backend' -Url $serverStatusUrl -Port $serverPort -TimeoutSeconds 180 -RequestTimeoutSeconds 10 -FailureLogPath (Join-Path $DevStateDir 'go-backend.stderr.log') -StartAction {
         Start-LoggedProcess -Name 'go-backend' -FilePath $goCommand -ArgumentList @('run', './cmd/server/main.go') -WorkingDirectory (Join-Path $RepoRoot 'go-backend')
     }
 
@@ -392,7 +474,7 @@ try {
     # Tauri binary can remain running after previous sessions and lock target/debug executable.
     Stop-ProcessByName -ProcessName 'myural_yukari_tauri'
 
-    Invoke-ServiceStep -Name 'Tauri frontend' -Url 'http://localhost:1420' -Port 1420 -TimeoutSeconds 180 -RequestTimeoutSeconds 10 -StartAction {
+    Invoke-ServiceStep -Name 'Tauri frontend' -Url 'http://localhost:1420' -Port 1420 -TimeoutSeconds 180 -RequestTimeoutSeconds 10 -FailureLogPath (Join-Path $DevStateDir 'tauri-app.stderr.log') -StartAction {
         Start-LoggedProcess -Name 'tauri-app' -FilePath $npmCommand -ArgumentList @('run', 'tauri:dev') -WorkingDirectory (Join-Path $RepoRoot 'tauri_app')
     }
 
