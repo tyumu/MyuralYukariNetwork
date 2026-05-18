@@ -7,7 +7,7 @@ from src.contracts import RecallReq
 
 
 class RecallQueryShapeTests(unittest.IsolatedAsyncioTestCase):
-    async def test_recall_uses_string_content_query(self) -> None:
+    async def test_recall_uses_text_object_query(self) -> None:
         memory_service = AsyncMock()
         memory_service.retrieve = AsyncMock(return_value={"items": []})
 
@@ -28,7 +28,7 @@ class RecallQueryShapeTests(unittest.IsolatedAsyncioTestCase):
         kwargs = memory_service.retrieve.await_args.kwargs
         self.assertEqual(
             kwargs["queries"],
-            [{"role": "user", "content": "What did I say before?"}],
+            [{"role": "user", "content": {"text": "What did I say before?"}}],
         )
         self.assertEqual(kwargs["where"]["user_id"], "u1")
         self.assertEqual(kwargs["where"]["tenant"], "local-dev")

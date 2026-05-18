@@ -14,13 +14,15 @@ $env:FRONTEND_ORIGIN = "http://localhost:1420"
 
 # Shared llama.cpp / MemU LLM configuration
 $env:LLM_BASE_URL = "http://localhost:11434/v1"
-$env:LLM_API_KEY = ""
-$env:CHAT_MODEL = "unsloth/gemma-4-E4B-it-GGUF"
-$env:EMBED_MODEL = "nomic-embed-text:latest-num-gpu0"
+$env:LLM_API_KEY = "ollama"
+$env:CHAT_MODEL = "gemma3:12b"
+$env:EMBED_MODEL = "nomic-embed-text"
 $env:VITE_API_BASE_URL = "http://localhost:8000"
 
-# PostgreSQL connection
-$env:POSTGRES_DSN = "postgresql://postgres:1210@127.0.0.1:5433/memu_db"
+# MemU DB
+$env:MEMORY_DB_PROVIDER = "postgres"
+$env:MEMORY_DB_DSN = "postgresql://postgres:1210@127.0.0.1:5433/memu_db"
+$env:MEMORY_DB_DDL_MODE = "create"
 $env:RETRIEVAL_TOP_K = "5"
 $env:SIDECAR_HEALTH_STRICT = "false"
 

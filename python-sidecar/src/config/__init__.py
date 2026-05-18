@@ -41,13 +41,26 @@ class AppConfig:
     embed_model: str
 
     # Database (MemU)
-    postgres_dsn: str
+    memory_db_provider: str
+    memory_db_dsn: str
+    memory_db_ddl_mode: str
     retrieval_top_k: int
 
     @classmethod
     def from_env(cls) -> "AppConfig":
         """Load configuration from environment variables."""
-        chat_model = os.getenv("CHAT_MODEL", "unsloth/gemma-4-E4B-it-GGUF")
+        legacy_postgres_dsn = os.getenv("POSTGRES_DSN", "").strip()
+        explicit_db_provider = os.getenv("MEMORY_DB_PROVIDER", "").strip().lower()
+        if explicit_db_provider:
+            memory_db_provider = explicit_db_provider
+        else:
+            memory_db_provider = "postgres"
+
+        memory_db_dsn = os.getenv("MEMORY_DB_DSN", "").strip()
+        if not memory_db_dsn:
+            memory_db_dsn = legacy_postgres_dsn or "postgresql://user:password@localhost/memu"
+
+        chat_model = os.getenv("CHAT_MODEL", "gemma3:12b")
         return cls(
             memory_grpc_endpoint=os.getenv("MEMORY_GRPC_ENDPOINT", _default_memory_grpc_endpoint()),
             sidecar_health_strict=os.getenv("SIDECAR_HEALTH_STRICT", "false").lower() in ("1", "true", "yes"),
@@ -55,11 +68,13 @@ class AppConfig:
             log_level=os.getenv("LOG_LEVEL", "info"),
             
             llm_base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
-            llm_api_key=os.getenv("LLM_API_KEY", ""),
+            llm_api_key=os.getenv("LLM_API_KEY", "ollama"),
             chat_model=chat_model,
-            embed_model=os.getenv("EMBED_MODEL", "nomic-embed-text:latest-num-gpu0"),
+            embed_model=os.getenv("EMBED_MODEL", "nomic-embed-text"),
             
-            postgres_dsn=os.getenv("POSTGRES_DSN", "postgresql://user:password@localhost/memu"),
+            memory_db_provider=memory_db_provider,
+            memory_db_dsn=memory_db_dsn,
+            memory_db_ddl_mode=os.getenv("MEMORY_DB_DDL_MODE", "create"),
             retrieval_top_k=int(os.getenv("RETRIEVAL_TOP_K", "5")),
         )
 
@@ -73,34 +88,42 @@ def _default_memory_grpc_endpoint() -> str:
 def build_memory_service(config: AppConfig) -> "MemoryService":
     """Build and return a configured MemoryService instance."""
     from memu.app import MemoryService
-    
-    memory_categories = [
-        {"name": "conversation", "description": "Conversation turns and short-term context."},
-        {"name": "user_profile", "description": "Stable user traits and preferences."},
-    ]
-    
+
     service = MemoryService(
         llm_profiles={
             "default": {
+                "provider": "openai",
                 "client_backend": "sdk",
                 "base_url": config.llm_base_url,
                 "api_key": config.llm_api_key,
                 "chat_model": config.chat_model,
+            },
+            "embedding": {
+                "provider": "openai",
+                "client_backend": "sdk",
+                "base_url": config.llm_base_url,
+                "api_key": config.llm_api_key,
                 "embed_model": config.embed_model,
             }
         },
-        memorize_config={
-            "memory_categories": memory_categories,
-        },
         database_config={
             "metadata_store": {
-                "provider": "postgres",
-                "dsn": config.postgres_dsn,
-            }
+                "provider": config.memory_db_provider,
+                "dsn": config.memory_db_dsn,
+                "ddl_mode": config.memory_db_ddl_mode,
+            },
+            "vector_index": {"provider": "bruteforce"},
         },
         retrieve_config={
-            "item": {"top_k": config.retrieval_top_k},
+            "method": "rag",
+            "route_intention": True,
+            "item": {
+                "top_k": config.retrieval_top_k,
+                "ranking": "salience",
+                "recency_decay_days": 30.0,
+            },
         },
+        memorize_config={"enable_item_reinforcement": True},
     )
     
     return service

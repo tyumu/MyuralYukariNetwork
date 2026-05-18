@@ -40,11 +40,13 @@ FRONTEND_ORIGIN=http://localhost:1420
 
 MEMORY_GRPC_ENDPOINT=127.0.0.1:50051
 LLM_BASE_URL=http://localhost:11434/v1
-LLM_API_KEY=
-CHAT_MODEL=unsloth/gemma-4-E4B-it-GGUF
-EMBED_MODEL=nomic-embed-text:latest-num-gpu0
+LLM_API_KEY=ollama
+CHAT_MODEL=gemma3:12b
+EMBED_MODEL=nomic-embed-text
 VITE_API_BASE_URL=http://localhost:8000
-POSTGRES_DSN=postgresql://postgres:1210@127.0.0.1:5433/memu_db
+MEMORY_DB_PROVIDER=postgres
+MEMORY_DB_DSN=postgresql://postgres:1210@127.0.0.1:5433/memu_db
+MEMORY_DB_DDL_MODE=create
 RETRIEVAL_TOP_K=5
 
 # Optional overrides for scripts/start-dev.ps1
@@ -155,7 +157,7 @@ Invoke-WebRequest -UseBasicParsing -Uri http://localhost:8000/chat -Method POST 
 
 `SIDECAR_HEALTH_STRICT=true` のときは sidecar gRPC `Health` が埋め込み実行まで検証します。`false` の場合はサービス初期化のみ確認します。
 
-`CHAT_MODEL` は `/v1/models` の `id`（例: `unsloth/gemma-4-E4B-it-GGUF`）に合わせます。`EMBED_MODEL` は埋め込み対応モデル（例: `nomic-embed-text:latest-num-gpu0`）を指定してください。
+`CHAT_MODEL` は `/v1/models` の `id`（例: `gemma3:12b`）に合わせます。`EMBED_MODEL` は埋め込み対応モデル（例: `nomic-embed-text`）を指定してください。
 
 ## 10. 停止と片付け
 

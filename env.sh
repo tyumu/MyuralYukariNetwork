@@ -15,13 +15,15 @@ export FRONTEND_ORIGIN="http://localhost:1420"
 
 # Shared llama.cpp / MemU LLM configuration
 export LLM_BASE_URL="http://localhost:11434/v1"
-export LLM_API_KEY=""
-export CHAT_MODEL="unsloth/gemma-4-E4B-it-GGUF"
-export EMBED_MODEL="nomic-embed-text:latest-num-gpu0"
+export LLM_API_KEY="ollama"
+export CHAT_MODEL="gemma3:12b"
+export EMBED_MODEL="nomic-embed-text"
 export VITE_API_BASE_URL="http://localhost:8000"
 
-# PostgreSQL connection
-export POSTGRES_DSN="postgresql://postgres:1210@127.0.0.1:5433/memu_db"
+# MemU DB
+export MEMORY_DB_PROVIDER="postgres"
+export MEMORY_DB_DSN="postgresql://postgres:1210@127.0.0.1:5433/memu_db"
+export MEMORY_DB_DDL_MODE="create"
 export RETRIEVAL_TOP_K="5"
 export SIDECAR_HEALTH_STRICT="false"
 

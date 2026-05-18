@@ -27,6 +27,7 @@ import memory_pb2_grpc
 from src.contracts import MemorizeReq, MemorizeResp, RecallItem, RecallReq, RecallResp
 from src.config import AppConfig, build_memory_service
 from src.logger import setup_logger
+from src.memu_payloads import build_conversation_payload, build_retrieve_queries
 
 # Load config
 try:
@@ -105,21 +106,7 @@ async def _handle_memorize(req: MemorizeReq) -> MemorizeResp:
         # MemU expects a resource URL. Persist the chat turn as a conversation JSON file.
         temp_path: Path | None = None
         try:
-            conversation_payload = {
-                "content": [
-                    {
-                        "role": "user",
-                        "content": {"text": req.text},
-                    }
-                ]
-            }
-            if req.assistant_text.strip():
-                conversation_payload["content"].append(
-                    {
-                        "role": "assistant",
-                        "content": {"text": req.assistant_text},
-                    }
-                )
+            conversation_payload = build_conversation_payload(req.text, req.assistant_text)
 
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
                 json.dump(conversation_payload, f, ensure_ascii=False)
@@ -191,7 +178,7 @@ async def _handle_recall(req: RecallReq) -> RecallResp:
         result = await _retrieve_with_method_override(
             memory_service=memory_service,
             method=method,
-            queries=[{"role": "user", "content": req.query}],
+            queries=build_retrieve_queries(req.query),
             where=where,
         )
 

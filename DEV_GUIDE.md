@@ -86,7 +86,9 @@ cd <MyuralYukariNetwork のクローン先>
 - `LLM_API_KEY`
 - `CHAT_MODEL`
 - `EMBED_MODEL`
-- `POSTGRES_DSN`
+- `MEMORY_DB_PROVIDER`
+- `MEMORY_DB_DSN`
+- `MEMORY_DB_DDL_MODE`
 - `RETRIEVAL_TOP_K`
 - `VITE_API_BASE_URL`
 - `SIDECAR_HEALTH_STRICT`
@@ -174,9 +176,11 @@ Invoke-WebRequest -UseBasicParsing -Uri http://localhost:8000/chat -Method POST 
 - `FRONTEND_ORIGIN` (default: `http://localhost:1420`)
 - `MEMORY_GRPC_ENDPOINT` (Windows dev default: `127.0.0.1:50051`)
 - `LLM_BASE_URL` (default: `http://localhost:11434/v1`)
-- `CHAT_MODEL` (default: `unsloth/gemma-4-E4B-it-GGUF`)
-- `EMBED_MODEL` (default: `nomic-embed-text:latest-num-gpu0`)
-- `POSTGRES_DSN`
+- `CHAT_MODEL` (default: `gemma3:12b`)
+- `EMBED_MODEL` (default: `nomic-embed-text`)
+- `MEMORY_DB_PROVIDER` (default: `postgres`)
+- `MEMORY_DB_DSN` (default: `postgresql://postgres:1210@127.0.0.1:5433/memu_db`)
+- `MEMORY_DB_DDL_MODE` (default: `create`)
 - `RETRIEVAL_TOP_K` (default: `5`, range `1..50`)
 - `SIDECAR_HEALTH_STRICT` (`true` で埋め込み実行までチェック)
 
